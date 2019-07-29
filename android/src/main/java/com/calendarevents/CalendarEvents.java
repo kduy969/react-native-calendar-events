@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.TimeZone;
+
 import android.util.Log;
 
 public class CalendarEvents extends ReactContextBaseJavaModule {
@@ -59,8 +60,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     }
 
     //region Calendar Permissions
-    private void requestCalendarReadWritePermission(final Promise promise)
-    {
+    private void requestCalendarReadWritePermission(final Promise promise) {
         Activity currentActivity = getCurrentActivity();
         if (currentActivity == null) {
             promise.reject("E_ACTIVITY_DOES_NOT_EXIST", "Activity doesn't exist");
@@ -284,13 +284,13 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
             if (startDate.getType() == ReadableType.String) {
                 eStartDate.setTime(sdf.parse(startDate.asString()));
             } else if (startDate.getType() == ReadableType.Number) {
-                eStartDate.setTimeInMillis((long)startDate.asDouble());
+                eStartDate.setTimeInMillis((long) startDate.asDouble());
             }
 
             if (endDate.getType() == ReadableType.String) {
                 eEndDate.setTime(sdf.parse(endDate.asString()));
             } else if (endDate.getType() == ReadableType.Number) {
-                eEndDate.setTimeInMillis((long)endDate.asDouble());
+                eEndDate.setTimeInMillis((long) endDate.asDouble());
             }
         } catch (ParseException e) {
             e.printStackTrace();
@@ -451,7 +451,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
                     startCal.setTime(sdf.parse(details.getString("startDate")));
                     eventValues.put(CalendarContract.Events.DTSTART, startCal.getTimeInMillis());
                 } else if (type == ReadableType.Number) {
-                    eventValues.put(CalendarContract.Events.DTSTART, (long)details.getDouble("startDate"));
+                    eventValues.put(CalendarContract.Events.DTSTART, (long) details.getDouble("startDate"));
                 }
             } catch (ParseException e) {
                 e.printStackTrace();
@@ -468,7 +468,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
                     endCal.setTime(sdf.parse(details.getString("endDate")));
                     eventValues.put(CalendarContract.Events.DTEND, endCal.getTimeInMillis());
                 } else if (type == ReadableType.Number) {
-                    eventValues.put(CalendarContract.Events.DTEND, (long)details.getDouble("endDate"));
+                    eventValues.put(CalendarContract.Events.DTEND, (long) details.getDouble("endDate"));
                 }
             } catch (ParseException e) {
                 e.printStackTrace();
@@ -516,7 +516,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
                         endDate = format.format(sdf.parse(recurrenceRule.getString("endDate")));
                     } else if (type == ReadableType.Number) {
                         Calendar calendar = Calendar.getInstance();
-                        calendar.setTimeInMillis((long)recurrenceRule.getDouble("endDate"));
+                        calendar.setTimeInMillis((long) recurrenceRule.getDouble("endDate"));
                         endDate = format.format(calendar.getTime());
                     }
                 }
@@ -735,7 +735,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     }
 
     //sync adaptors
-    private Uri eventUriAsSyncAdapter (Uri uri, String accountName, String accountType) {
+    private Uri eventUriAsSyncAdapter(Uri uri, String accountName, String accountType) {
         uri = uri.buildUpon()
                 .appendQueryParameter(CalendarContract.CALLER_IS_SYNCADAPTER, "true")
                 .appendQueryParameter(CalendarContract.Calendars.ACCOUNT_NAME, accountName)
@@ -756,7 +756,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
 
     //region Attendees
     private void createAttendeesForEvent(ContentResolver resolver, int eventID, ReadableArray attendees) {
-        Cursor cursor = CalendarContract.Attendees.query(resolver, eventID, new String[] {
+        Cursor cursor = CalendarContract.Attendees.query(resolver, eventID, new String[]{
                 CalendarContract.Attendees._ID
         });
 
@@ -791,8 +791,8 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         Cursor cursor = null;
 
         if (resolver != null) {
-            cursor = CalendarContract.Reminders.query(resolver, eventID, new String[] {
-                CalendarContract.Reminders._ID
+            cursor = CalendarContract.Reminders.query(resolver, eventID, new String[]{
+                    CalendarContract.Reminders._ID
             });
         }
 
@@ -810,20 +810,23 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         if (cursor != null) {
             cursor.close();
         }
+        try {
+            for (int i = 0; i < reminders.size(); i++) {
+                ReadableMap reminder = reminders.getMap(i);
+                ReadableType type = reminder.getType("date");
+                if (type == ReadableType.Number) {
+                    int minutes = reminder.getInt("date");
+                    ContentValues reminderValues = new ContentValues();
 
-        for (int i = 0; i < reminders.size(); i++) {
-            ReadableMap reminder = reminders.getMap(i);
-            ReadableType type = reminder.getType("date");
-            if (type == ReadableType.Number) {
-                int minutes = reminder.getInt("date");
-                ContentValues reminderValues = new ContentValues();
+                    reminderValues.put(CalendarContract.Reminders.EVENT_ID, eventID);
+                    reminderValues.put(CalendarContract.Reminders.MINUTES, minutes);
+                    reminderValues.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
 
-                reminderValues.put(CalendarContract.Reminders.EVENT_ID, eventID);
-                reminderValues.put(CalendarContract.Reminders.MINUTES, minutes);
-                reminderValues.put(CalendarContract.Reminders.METHOD, CalendarContract.Reminders.METHOD_ALERT);
-
-                resolver.insert(CalendarContract.Reminders.CONTENT_URI, reminderValues);
+                    resolver.insert(CalendarContract.Reminders.CONTENT_URI, reminderValues);
+                }
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -835,7 +838,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
 
         Cursor cursor = cr.query(CalendarContract.Reminders.CONTENT_URI, new String[]{
                 CalendarContract.Reminders.MINUTES
-        }, selection, new String[] {eventID}, null);
+        }, selection, new String[]{eventID}, null);
 
         while (cursor != null && cursor.moveToNext()) {
             WritableNativeMap alarm = new WritableNativeMap();
@@ -868,8 +871,8 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     //region Availability
     private WritableNativeArray calendarAllowedAvailabilitiesFromDBString(String dbString) {
         WritableNativeArray availabilitiesStrings = new WritableNativeArray();
-        for(String availabilityId: dbString.split(",")) {
-            switch(Integer.parseInt(availabilityId)) {
+        for (String availabilityId : dbString.split(",")) {
+            switch (Integer.parseInt(availabilityId)) {
                 case CalendarContract.Events.AVAILABILITY_BUSY:
                     availabilitiesStrings.pushString("busy");
                     break;
@@ -885,9 +888,8 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         return availabilitiesStrings;
     }
 
-    private String availabilityStringMatchingConstant(Integer constant)
-    {
-        switch(constant) {
+    private String availabilityStringMatchingConstant(Integer constant) {
+        switch (constant) {
             case CalendarContract.Events.AVAILABILITY_BUSY:
             default:
                 return "busy";
@@ -899,11 +901,11 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     }
 
     private Integer availabilityConstantMatchingString(String string) throws IllegalArgumentException {
-        if (string.equals("free")){
+        if (string.equals("free")) {
             return CalendarContract.Events.AVAILABILITY_FREE;
         }
 
-        if (string.equals("tentative")){
+        if (string.equals("tentative")) {
             return CalendarContract.Events.AVAILABILITY_TENTATIVE;
         }
 
@@ -911,7 +913,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     }
     //endregion
 
-    private String ReadableArrayToString (ReadableArray strArr) {
+    private String ReadableArrayToString(ReadableArray strArr) {
         ArrayList<Object> array = strArr.toArrayList();
         StringBuilder strBuilder = new StringBuilder();
         for (int i = 0; i < array.size(); i++) {
@@ -927,10 +929,10 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
         String rrule;
 
         if (recurrence.equals("daily")) {
-            rrule=  "FREQ=DAILY";
+            rrule = "FREQ=DAILY";
         } else if (recurrence.equals("weekly")) {
             rrule = "FREQ=WEEKLY";
-        }  else if (recurrence.equals("monthly")) {
+        } else if (recurrence.equals("monthly")) {
             rrule = "FREQ=MONTHLY";
         } else if (recurrence.equals("yearly")) {
             rrule = "FREQ=YEARLY";
@@ -1126,7 +1128,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
 
             WritableNativeMap attendee = new WritableNativeMap();
 
-            attendee.putString("name", cursor.getString( 2));
+            attendee.putString("name", cursor.getString(2));
             attendee.putString("email", cursor.getString(3));
             attendee.putString("type", cursor.getString(4));
             attendee.putString("relationship", cursor.getString(5));
@@ -1173,7 +1175,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     public void findCalendars(final Promise promise) {
         if (this.haveCalendarReadWritePermissions()) {
             try {
-                Thread thread = new Thread(new Runnable(){
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         WritableArray calendars = findEventCalendars();
@@ -1196,7 +1198,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
             return;
         }
         try {
-            Thread thread = new Thread(new Runnable(){
+            Thread thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -1217,7 +1219,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     public void saveEvent(final String title, final ReadableMap details, final ReadableMap options, final Promise promise) {
         if (this.haveCalendarReadWritePermissions()) {
             try {
-                Thread thread = new Thread(new Runnable(){
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         int eventId;
@@ -1247,7 +1249,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
 
         if (this.haveCalendarReadWritePermissions()) {
             try {
-                Thread thread = new Thread(new Runnable(){
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         WritableNativeArray results = findEvents(startDate, endDate, calendars);
@@ -1269,7 +1271,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     public void findById(final String eventID, final Promise promise) {
         if (this.haveCalendarReadWritePermissions()) {
             try {
-                Thread thread = new Thread(new Runnable(){
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         WritableMap results = findEventById(eventID);
@@ -1291,7 +1293,7 @@ public class CalendarEvents extends ReactContextBaseJavaModule {
     public void removeEvent(final String eventID, final ReadableMap options, final Promise promise) {
         if (this.haveCalendarReadWritePermissions()) {
             try {
-                Thread thread = new Thread(new Runnable(){
+                Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         boolean successful = removeEvent(eventID, options);
